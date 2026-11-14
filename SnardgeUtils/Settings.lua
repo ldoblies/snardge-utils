@@ -8,6 +8,8 @@ if SnardgeUtilsSettings.mailFullStacksOnly == nil then
 	SnardgeUtilsSettings.mailFullStacksOnly = true
 end
 SnardgeUtilsSettings.mailRecipient = SnardgeUtilsSettings.mailRecipient or ''
+-- TSM custom price for materials bought on the auction house
+SnardgeUtilsSettings.profitPriceSource = SnardgeUtilsSettings.profitPriceSource or 'first(dbminbuyout, dbmarket)'
 
 ns.modules = {
 	{ key = 'bagMarks', label = 'Bag marks', tooltip = 'Ctrl, Alt and Shift clicks on items in your bags mark them to sell, bank or mail. Works with the default bags and with Bagnon.' },
@@ -18,6 +20,8 @@ ns.modules = {
 	{ key = 'manaRegen', label = 'Mana per second', tooltip = 'The player frame shows mana regen next to the mana bar while mana is not full. /sumana prints it.' },
 	{ key = 'lfgFilter', label = 'LFG filter and sort', tooltip = "The Looking For Group browser's gear menu filters listings by class and role and sorts them by level, highest first." },
 	{ key = 'fishRecast', label = 'Instant fishing recast', requires = 'Mastercraft', tooltip = "Mastercraft's fishing key casts again as soon as you let go of it after a catch, instead of 0.4 seconds later." },
+	{ key = 'vendorProfit', label = 'Vendor profit', requires = 'TradeSkillMaster', tooltip = "/suprofit lists the recipes your characters know by what a craft brings at a vendor, with materials at TSM prices or what vendors charged you. Shares recipes with your other license's characters while both are online." },
+	{ key = 'priceAlert', label = 'High prices at login', requires = 'TradeSkillMaster', tooltip = 'After logging in, a popup lists items you own that sell for at least 120% of their usual TSM price. /suprices shows it any time.' },
 }
 
 -- Modifier combos for left clicks on Bagnon items, as CTRL, ALT and SHIFT joined by '-' in

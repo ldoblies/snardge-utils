@@ -7,7 +7,8 @@ A collection of small quality of life tools for **WoW Forever**. Every feature c
 | Bagnon | Bag marks work in Bagnon as well as in the default bags; fixes its bank bag icons |
 | Questie | Quest mobs for the target macro, quest XP fallback |
 | Leatrix Plus | Settings appear as a page in its panel |
-| Mastercraft | Instant fishing recast |
+| Mastercraft | Instant fishing recast; recipes it already scanned show up in vendor profit right away |
+| TradeSkillMaster | Auction house prices for vendor profit and high prices at login (required for both) |
 
 ## Features
 
@@ -53,6 +54,29 @@ Plays the raid warning sound once each time your health drops below a threshold,
 
 WoW Forever does not let addons read your health, so this runs on Blizzard's own Combat Audio Alerts: SnardgeUtils turns on the health pulse with its volume at zero, keeps every spoken alert off, and plays its sound when the pulse starts. These are account-wide game settings; turning the warning off in SnardgeUtils switches the alerts back off after a `/reload`.
 
+### Vendor profit
+
+`/suprofit` lists every recipe your characters know by what one craft brings when you sell the result to a vendor, most profitable first:
+
+```
++1s 22c  Light Leather Pants  Pepe Soft, Leatherworking 150
+      AH: 10 Light Leather + 1 Light Hide = 3s 49c, break-even 4s 71c  |  sells 5s 99c  |  vendor: 1 Fine Thread + 1 Salt = 1s 35c
+```
+
+- **Materials** cost the cheaper of TSM's auction house price and the vendor price. The break-even is the most the auction house materials may cost before the craft stops paying.
+- **Vendor prices are what you actually paid:** every merchant you open is remembered per character, so a reputation discount counts. Items you never saw at a merchant use TSM's vendor price.
+- **Cheapest way:** a material the same character can make (a Cured Light Hide from a Light Hide and Salt) counts at its crafting cost when that is cheaper.
+- **Recipes you don't know yet** are listed too (switch off with **Unlearned too**): every Forever recipe that makes something a vendor buys, with where to learn it (trainer and skill, or the pattern vendor of your faction, its zone, price and whether its stock is limited, or drop or quest) and which of your characters is closest. The list comes from Wowhead's Forever data, built into the addon.
+- **Filters:** profitable only, still gives skill (orange, yellow or green), unlearned too, and one character at a time.
+- **Your other license:** characters on your other WoW license appear on their own while both are online at the same time: SnardgeUtils finds them over the guild channel or a group and shares known recipes and vendor prices by whisper, and remembers them for next time. Without a shared guild or group, run `/suprofit add Name Surname` once on either side.
+- Recipes are read when you open a profession window, or taken from Mastercraft's own scans.
+
+### High prices at login
+
+A few seconds after you log in, a popup lists the items you own that sell for at least **120% of their usual price** right now, biggest jump first, with how many you have and the price each. It covers your bags and your bank as of your last bank visit, leaves out soulbound and grey items, and stays away when nothing qualifies. `/suprices` shows it any time.
+
+Prices come from TSM: the recent price (3-day, then 14-day market value, then the region average) against the 60-day historical price, the realm's first and the region's for commodities.
+
 ### More
 
 - **Map:** group member pins on the world map are drawn above Questie's icons.
@@ -74,6 +98,8 @@ WoW Forever does not let addons read your health, so this runs on Blizzard's own
 | `/sumana` | Print mana regen while casting and not casting |
 | `/sulow` | Show the state of the low health warning and Blizzard's audio alerts |
 | `/sumap` | Show the group pin frame level and size |
+| `/suprices` | Show the items that sell for at least 120% of their usual price |
+| `/suprofit` | Open the vendor profit list; `add Name` or `remove Name` to sync with a character on your other license, `sync` to ask for an update now, `source <TSM price>` to change the auction house price (default `first(dbminbuyout, dbmarket)`) |
 
 ## Installation
 

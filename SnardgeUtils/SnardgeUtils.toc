@@ -5,9 +5,9 @@
 ## Category: Quality of Life
 ## Version: 1.0.0
 ## X-License: MIT
-## OptionalDeps: Bagnon, Questie, Leatrix_Plus, Mastercraft
-## SavedVariablesPerCharacter: SnardgeUtilsSellMarks, SnardgeUtilsBankMarks, SnardgeUtilsBankAlwaysMarks, SnardgeUtilsMailMarks, SnardgeUtilsLfgFilter
-## SavedVariables: SnardgeUtilsSettings
+## OptionalDeps: Bagnon, Questie, Leatrix_Plus, Mastercraft, TradeSkillMaster
+## SavedVariablesPerCharacter: SnardgeUtilsSellMarks, SnardgeUtilsBankMarks, SnardgeUtilsBankAlwaysMarks, SnardgeUtilsMailMarks, SnardgeUtilsLfgFilter, SnardgeUtilsBankItems
+## SavedVariables: SnardgeUtilsSettings, SnardgeUtilsCrafts
 ## LoadSavedVariablesFirst: 1
 
 Settings.lua
@@ -21,4 +21,7 @@ ManaRegen.lua
 LowHealth.lua
 TargetMacro.lua
 FishRecast.lua
+RecipeData.lua
+VendorProfit.lua
+PriceAlert.lua
 Config.lua
