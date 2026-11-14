@@ -97,6 +97,27 @@ local function SellNext()
 	end
 end
 
+-- Without a purchased bank tab there is nowhere to deposit, and UseContainerItem falls back to
+-- using the item, which the game blocks for addons
+local function HasBankTab()
+	if not (BANK_TYPE and C_Bank.FetchNumPurchasedBankTabs) then
+		return true
+	end
+	return C_Bank.FetchNumPurchasedBankTabs(BANK_TYPE) > 0
+end
+
+local function HasBankMarkedItems()
+	for bag = 0, LAST_BAG do
+		for slot = 1, C_Container.GetContainerNumSlots(bag) do
+			local info = C_Container.GetContainerItemInfo(bag, slot)
+			if info and (SnardgeUtilsBankMarks[info.itemID] or SnardgeUtilsBankAlwaysMarks[info.itemID]) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 local function DepositNext()
 	-- UseContainerItem only deposits while the bank is open; anywhere else it uses the item,
 	-- and with a trade open it puts the item into the trade
@@ -541,7 +562,11 @@ frame:SetScript('OnEvent', function(_, event, name)
 		atBank = true
 		wipe(depositTried)
 		ClearFinishedBankMarks()
-		C_Timer.After(BANK_SETTLE_SECONDS, DepositNext)
+		if HasBankTab() then
+			C_Timer.After(BANK_SETTLE_SECONDS, DepositNext)
+		elseif HasBankMarkedItems() then
+			print(PREFIX .. 'items are marked for the bank, but you have no bank tab to put them in yet')
+		end
 	elseif event == 'BANKFRAME_CLOSED' then
 		atBank = false
 	elseif event == 'MAIL_SHOW' then
