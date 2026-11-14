@@ -10,7 +10,7 @@ end
 SnardgeUtilsSettings.mailRecipient = SnardgeUtilsSettings.mailRecipient or ''
 
 ns.modules = {
-	{ key = 'bagMarks', label = 'Bag marks', requires = 'Bagnon', tooltip = 'Ctrl, Alt and Shift clicks on Bagnon items mark them to sell, bank or mail. With ItemTree installed, items only worth their vendor price grey out too.' },
+	{ key = 'bagMarks', label = 'Bag marks', tooltip = 'Ctrl, Alt and Shift clicks on items in your bags mark them to sell, bank or mail. Works with the default bags and with Bagnon.' },
 	{ key = 'bankBagIcons', label = 'Bank bag icons', requires = 'Bagnon', tooltip = "Bagnon's bank bags show their own icons instead of question marks." },
 	{ key = 'mapPins', label = 'Group pins on top', tooltip = "Group member pins are drawn above Questie's map icons." },
 	{ key = 'xpRate', label = 'XP per hour', tooltip = 'The experience bar shows recent and session xp/hr. /suxp prints it.' },

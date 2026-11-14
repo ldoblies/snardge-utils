@@ -1,5 +1,5 @@
 local ADDON_NAME, ns = ...
-if not ns.IsEnabled('bagMarks') or not Bagnon then
+if not ns.IsEnabled('bagMarks') then
 	return
 end
 local SELL_DELAY_SECONDS = 0.2
@@ -19,8 +19,6 @@ local BANK_ALWAYS_TEXTURE = 'Interface/Buttons/UI-RefreshButton'
 local BANK_ALWAYS_SIZE = 12
 local MAIL_TEXTURE = 'Interface/MINIMAP/TRACKING/Mailbox'
 local MAIL_SIZE = 13
-local POOR_QUALITY = 0
-local CONSUMABLE_CLASS = 0
 -- includes the reagent bag, which sits one past NUM_BAG_SLOTS
 local LAST_BAG = NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS
 
@@ -28,9 +26,7 @@ local LAST_BAG = NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS
 local BANK_TYPE = C_Bank and C_Bank.AreAnyBankTypesViewable and Enum.BankType.Character
 
 local GetItemCount = C_Item and C_Item.GetItemCount or GetItemCount
-local GetItemInfoInstant = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
 
-local isVendorOnlyByLink = {}
 local soldItemIDs = {}
 local atMerchant = false
 local atBank = false
@@ -40,49 +36,13 @@ local mailing = false
 local attachTried = {}
 local attachedThisMail = {}
 
-local function IsVendorOnly(itemID, link, quality)
-	local cached = isVendorOnlyByLink[link]
-	if cached ~= nil then
-		return cached
-	end
-
-	-- ItemTree answers nil for every item until its data loads, so hold off caching until
-	-- it is ready; after that a nil answer is its real answer for that item and worth keeping
-	if not (ItemTreeAPI and ItemTreeAPI.IsReady()) then
-		return false
-	end
-
-	local facts = ItemTreeAPI.GetItemFacts(itemID, link)
-	if not facts then
-		isVendorOnlyByLink[link] = false
-		return false
-	end
-
-	local tags = facts.keep and facts.keep.tags
-	local vendorOnly = tags ~= nil and #tags == 1 and tags[1] == 'vendor'
-
-	-- ItemTree says Vendor for anything with no auction price, and for spare tools and outranked
-	-- potions, so its tag alone would grey items worth listing or still usable
-	if vendorOnly and quality ~= POOR_QUALITY then
-		local price = facts.price
-		local classID = select(6, GetItemInfoInstant(itemID))
-		vendorOnly = price ~= nil and price.source ~= 'vendor'
-			and facts.keep.tool == nil
-			and facts.uses.current == 0
-			and classID ~= CONSUMABLE_CLASS
-	end
-
-	isVendorOnlyByLink[link] = vendorOnly
-	return vendorOnly
-end
-
 local function Redraw()
-	Bagnon.Frames:Update()
-end
-
-local function Refresh()
-	wipe(isVendorOnlyByLink)
-	Redraw()
+	if Bagnon then
+		Bagnon.Frames:Update()
+	end
+	if ContainerFrame_UpdateAll then
+		ContainerFrame_UpdateAll()
+	end
 end
 
 local function ClearFinishedMarks()
@@ -96,7 +56,7 @@ local function ClearFinishedMarks()
 		end
 	end
 	if changed then
-		Refresh()
+		Redraw()
 	end
 end
 
@@ -311,6 +271,92 @@ local function UnmarkHint(action)
 	return combo == 'NONE' and '' or ' (' .. ns.ComboLabel(combo) .. ' to unmark)'
 end
 
+local function MarkSell(info)
+	if SnardgeUtilsSellMarks[info.itemID] then
+		SnardgeUtilsSellMarks[info.itemID] = nil
+		print(PREFIX .. 'unmarked ' .. info.hyperlink)
+	elseif info.hasNoValue then
+		print(PREFIX .. info.hyperlink .. ' has no sell price')
+		return
+	else
+		SnardgeUtilsSellMarks[info.itemID] = true
+		SnardgeUtilsBankMarks[info.itemID] = nil
+		SnardgeUtilsBankAlwaysMarks[info.itemID] = nil
+		SnardgeUtilsMailMarks[info.itemID] = nil
+		print(PREFIX .. 'will sell ' .. info.hyperlink .. ' at the next merchant')
+	end
+	Redraw()
+end
+
+local function MarkBank(info, always)
+	-- an always mark outlives the item, so it is kept in its own table that no cleanup walks
+	local marks = always and SnardgeUtilsBankAlwaysMarks or SnardgeUtilsBankMarks
+	local otherMarks = always and SnardgeUtilsBankMarks or SnardgeUtilsBankAlwaysMarks
+
+	if marks[info.itemID] then
+		marks[info.itemID] = nil
+		print(PREFIX .. 'unmarked ' .. info.hyperlink)
+	else
+		marks[info.itemID] = true
+		otherMarks[info.itemID] = nil
+		SnardgeUtilsSellMarks[info.itemID] = nil
+		SnardgeUtilsMailMarks[info.itemID] = nil
+		if always then
+			print(PREFIX .. 'will always bank ' .. info.hyperlink)
+		else
+			print(PREFIX .. 'will bank ' .. info.hyperlink .. ' at the next bank')
+		end
+	end
+	Redraw()
+end
+
+local function MarkMail(info)
+	if SnardgeUtilsMailMarks[info.itemID] then
+		SnardgeUtilsMailMarks[info.itemID] = nil
+		print(PREFIX .. 'unmarked ' .. info.hyperlink)
+	elseif info.isBound then
+		print(PREFIX .. info.hyperlink .. ' is soulbound and cannot be mailed')
+		return
+	else
+		SnardgeUtilsMailMarks[info.itemID] = true
+		SnardgeUtilsSellMarks[info.itemID] = nil
+		SnardgeUtilsBankMarks[info.itemID] = nil
+		SnardgeUtilsBankAlwaysMarks[info.itemID] = nil
+		print(PREFIX .. 'will always mail ' .. info.hyperlink .. ' to ' .. (MailRecipient() or 'your recipient, once you set one with the cog next to Bag marks in /su'))
+	end
+	Redraw()
+end
+
+-- info is the slot's container item info; bag is nil when the slot is not in your own bags
+local function OnItemClick(info, bag, mouseButton)
+	local sell = ClickIs('sell', mouseButton)
+	local bankAlways = ClickIs('bankAlways', mouseButton)
+	local bank = ClickIs('bank', mouseButton)
+	local mail = ClickIs('mail', mouseButton)
+	if not (sell or bankAlways or bank or mail) or not info or not info.hyperlink then
+		return
+	end
+
+	-- Ctrl is also the dressing room's modified click, so gear opens it on the way through
+	if DressUpFrame and DressUpFrame:IsShown() then
+		HideUIPanel(DressUpFrame)
+	end
+
+	if sell then
+		MarkSell(info)
+		return
+	end
+	-- bank, keyring and guild bank slots hold nothing a bank or mail run would move
+	if type(bag) ~= 'number' or bag < 0 or bag > LAST_BAG then
+		return
+	end
+	if mail then
+		MarkMail(info)
+	else
+		MarkBank(info, bankAlways)
+	end
+end
+
 local function MarkTexture(button, key, texture, size)
 	if not button[key] then
 		button[key] = button:CreateTexture(nil, 'OVERLAY', nil, 7)
@@ -321,19 +367,8 @@ local function MarkTexture(button, key, texture, size)
 	return button[key]
 end
 
-local function OnSetDesaturated(button, gray)
-	local info = button.info
-	if gray or not info or not info.itemID or not info.hyperlink then
-		return
-	end
-	if SnardgeUtilsSellMarks[info.itemID] or IsVendorOnly(info.itemID, info.hyperlink, info.quality) then
-		SetItemButtonDesaturated(button, true)
-	end
-end
-
--- UpdateBorder's last step shows or hides the border and glow, so this runs after it
-local function OnUpdateBorder(button)
-	local itemID = button.info and button.info.itemID
+-- Runs after the bag addon has drawn the slot's own border, so a mark's color replaces it
+local function Decorate(button, itemID)
 	local sell = itemID and SnardgeUtilsSellMarks[itemID]
 	local bankOnce = itemID and SnardgeUtilsBankMarks[itemID]
 	local bankAlways = itemID and SnardgeUtilsBankAlwaysMarks[itemID]
@@ -347,8 +382,10 @@ local function OnUpdateBorder(button)
 		elseif mail then
 			r, g, b = 1, 0.82, 0
 		end
-		button.IconGlow:SetVertexColor(r, g, b, 1)
-		button.IconGlow:Show()
+		if button.IconGlow then
+			button.IconGlow:SetVertexColor(r, g, b, 1)
+			button.IconGlow:Show()
+		end
 		button.IconBorder:SetVertexColor(r, g, b)
 		button.IconBorder:Show()
 	end
@@ -378,142 +415,94 @@ local function OnUpdateBorder(button)
 	end
 end
 
-hooksecurefunc(Bagnon.Item, 'SetDesaturated', OnSetDesaturated)
-hooksecurefunc(Bagnon.Item, 'UpdateBorder', OnUpdateBorder)
-
-hooksecurefunc(Bagnon.Item, 'PostClick', function(button, mouseButton)
-	if not ClickIs('sell', mouseButton) then
+local function AddTooltipLine(tooltip, itemID, reshow)
+	if not itemID then
 		return
 	end
-
-	local info = button.info
-	-- guild bank buttons have no IsCached
-	if not button.hasItem or not info or not info.hyperlink or (button.IsCached and button:IsCached()) then
-		return
-	end
-
-	-- Ctrl is also the dressing room's modified click, so gear opens it on the way through
-	if DressUpFrame and DressUpFrame:IsShown() then
-		HideUIPanel(DressUpFrame)
-	end
-
-	if SnardgeUtilsSellMarks[info.itemID] then
-		SnardgeUtilsSellMarks[info.itemID] = nil
-		print(PREFIX .. 'unmarked ' .. info.hyperlink)
-	elseif info.hasNoValue then
-		print(PREFIX .. info.hyperlink .. ' has no sell price')
-		return
-	else
-		SnardgeUtilsSellMarks[info.itemID] = true
-		SnardgeUtilsBankMarks[info.itemID] = nil
-		SnardgeUtilsBankAlwaysMarks[info.itemID] = nil
-		SnardgeUtilsMailMarks[info.itemID] = nil
-		print(PREFIX .. 'will sell ' .. info.hyperlink .. ' at the next merchant')
-	end
-	Refresh()
-end)
-
-hooksecurefunc(Bagnon.Item, 'PostClick', function(button, mouseButton)
-	local always
-	if ClickIs('bankAlways', mouseButton) then
-		always = true
-	elseif ClickIs('bank', mouseButton) then
-		always = false
+	if SnardgeUtilsSellMarks[itemID] then
+		tooltip:AddLine('Marked to sell once' .. UnmarkHint('sell'), 1, 0.2, 0.2)
+	elseif SnardgeUtilsBankAlwaysMarks[itemID] then
+		tooltip:AddLine('Marked to always bank' .. UnmarkHint('bankAlways'), 0.2, 0.6, 1)
+	elseif SnardgeUtilsBankMarks[itemID] then
+		tooltip:AddLine('Marked to bank' .. UnmarkHint('bank'), 0.2, 0.6, 1)
+	elseif SnardgeUtilsMailMarks[itemID] then
+		tooltip:AddLine('Marked to always mail to ' .. (MailRecipient() or 'no recipient set') .. UnmarkHint('mail'), 1, 0.82, 0)
 	else
 		return
 	end
-
-	local info = button.info
-	local bag = button.bag
-	-- bank, keyring and guild bank slots hold nothing a bank run would move
-	if type(bag) ~= 'number' or bag < 0 or bag > LAST_BAG then
-		return
+	if reshow then
+		tooltip:Show()
 	end
-	if not button.hasItem or not info or not info.hyperlink or (button.IsCached and button:IsCached()) then
-		return
-	end
+end
 
-	if DressUpFrame and DressUpFrame:IsShown() then
-		HideUIPanel(DressUpFrame)
-	end
+if Bagnon then
+	hooksecurefunc(Bagnon.Item, 'SetDesaturated', function(button, gray)
+		local itemID = button.info and button.info.itemID
+		if not gray and itemID and SnardgeUtilsSellMarks[itemID] then
+			SetItemButtonDesaturated(button, true)
+		end
+	end)
+	-- UpdateBorder's last step shows or hides the border and glow, so this runs after it
+	hooksecurefunc(Bagnon.Item, 'UpdateBorder', function(button)
+		Decorate(button, button.info and button.info.itemID)
+	end)
+	hooksecurefunc(Bagnon.Item, 'PostClick', function(button, mouseButton)
+		-- guild bank buttons have no IsCached
+		if not button.hasItem or (button.IsCached and button:IsCached()) then
+			return
+		end
+		OnItemClick(button.info, button.bag, mouseButton)
+	end)
+	hooksecurefunc(Bagnon.Item, 'ShowTooltip', function(button)
+		AddTooltipLine(GameTooltip, button.info and button.info.itemID, true)
+	end)
+end
 
-	-- an always mark outlives the item, so it is kept in its own table that no cleanup walks
-	local marks = always and SnardgeUtilsBankAlwaysMarks or SnardgeUtilsBankMarks
-	local otherMarks = always and SnardgeUtilsBankMarks or SnardgeUtilsBankAlwaysMarks
+-- Blizzard's bag buttons come from a pool and are reused for other slots, so each is hooked
+-- once and looks up its current slot when clicked
+local function BlizzardItemID(button)
+	local info = C_Container.GetContainerItemInfo(button:GetBagID(), button:GetID())
+	return info and info.itemID
+end
 
-	if marks[info.itemID] then
-		marks[info.itemID] = nil
-		print(PREFIX .. 'unmarked ' .. info.hyperlink)
-	else
-		marks[info.itemID] = true
-		otherMarks[info.itemID] = nil
-		SnardgeUtilsSellMarks[info.itemID] = nil
-		SnardgeUtilsMailMarks[info.itemID] = nil
-		if always then
-			print(PREFIX .. 'will always bank ' .. info.hyperlink)
-		else
-			print(PREFIX .. 'will bank ' .. info.hyperlink .. ' at the next bank')
+local function OnBlizzardClick(button, mouseButton)
+	local bag = button:GetBagID()
+	OnItemClick(C_Container.GetContainerItemInfo(bag, button:GetID()), bag, mouseButton)
+end
+
+local function DecorateBlizzardFrame(containerFrame)
+	for _, button in containerFrame:EnumerateValidItems() do
+		if not button.snardgeHooked then
+			button.snardgeHooked = true
+			button:HookScript('OnClick', OnBlizzardClick)
+		end
+		button.snardgeItemID = BlizzardItemID(button)
+		Decorate(button, button.snardgeItemID)
+		if button.snardgeItemID and SnardgeUtilsSellMarks[button.snardgeItemID] then
+			SetItemButtonDesaturated(button, true)
 		end
 	end
+end
 
-	Redraw()
-end)
-
-hooksecurefunc(Bagnon.Item, 'PostClick', function(button, mouseButton)
-	if not ClickIs('mail', mouseButton) then
-		return
+if ContainerFrameUtil_EnumerateContainerFrames then
+	for _, containerFrame in ContainerFrameUtil_EnumerateContainerFrames() do
+		hooksecurefunc(containerFrame, 'UpdateItems', DecorateBlizzardFrame)
 	end
-
-	local info = button.info
-	local bag = button.bag
-	if type(bag) ~= 'number' or bag < 0 or bag > LAST_BAG then
-		return
+	-- Locking and unlocking a slot redraws its saturation outside UpdateItems
+	hooksecurefunc('SetItemButtonDesaturated', function(button, desaturated)
+		if not desaturated and button and button.snardgeHooked and button.snardgeItemID
+			and SnardgeUtilsSellMarks[button.snardgeItemID] then
+			SetItemButtonDesaturated(button, true)
+		end
+	end)
+	if TooltipDataProcessor and Enum.TooltipDataType then
+		TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip)
+			local owner = tooltip:GetOwner()
+			if tooltip == GameTooltip and owner and owner.snardgeHooked then
+				AddTooltipLine(tooltip, BlizzardItemID(owner))
+			end
+		end)
 	end
-	if not button.hasItem or not info or not info.hyperlink or (button.IsCached and button:IsCached()) then
-		return
-	end
-
-	if DressUpFrame and DressUpFrame:IsShown() then
-		HideUIPanel(DressUpFrame)
-	end
-
-	if SnardgeUtilsMailMarks[info.itemID] then
-		SnardgeUtilsMailMarks[info.itemID] = nil
-		print(PREFIX .. 'unmarked ' .. info.hyperlink)
-	elseif info.isBound then
-		print(PREFIX .. info.hyperlink .. ' is soulbound and cannot be mailed')
-		return
-	else
-		SnardgeUtilsMailMarks[info.itemID] = true
-		SnardgeUtilsSellMarks[info.itemID] = nil
-		SnardgeUtilsBankMarks[info.itemID] = nil
-		SnardgeUtilsBankAlwaysMarks[info.itemID] = nil
-		print(PREFIX .. 'will always mail ' .. info.hyperlink .. ' to ' .. (MailRecipient() or 'your recipient, once you set one with the cog next to Bag marks in /su'))
-	end
-
-	Refresh()
-end)
-
-hooksecurefunc(Bagnon.Item, 'ShowTooltip', function(button)
-	local itemID = button.info and button.info.itemID
-	if itemID and SnardgeUtilsSellMarks[itemID] then
-		GameTooltip:AddLine('Marked to sell once' .. UnmarkHint('sell'), 1, 0.2, 0.2)
-		GameTooltip:Show()
-	elseif itemID and SnardgeUtilsBankAlwaysMarks[itemID] then
-		GameTooltip:AddLine('Marked to always bank' .. UnmarkHint('bankAlways'), 0.2, 0.6, 1)
-		GameTooltip:Show()
-	elseif itemID and SnardgeUtilsBankMarks[itemID] then
-		GameTooltip:AddLine('Marked to bank' .. UnmarkHint('bank'), 0.2, 0.6, 1)
-		GameTooltip:Show()
-	elseif itemID and SnardgeUtilsMailMarks[itemID] then
-		GameTooltip:AddLine('Marked to always mail to ' .. (MailRecipient() or 'no recipient set') .. UnmarkHint('mail'), 1, 0.82, 0)
-		GameTooltip:Show()
-	end
-end)
-
-if ItemTreeAPI then
-	ItemTreeAPI.RegisterReadyCallback(Refresh)
-	ItemTreeAPI.RegisterChangeCallback(Refresh)
 end
 
 local frame = CreateFrame('Frame')
@@ -523,7 +512,6 @@ frame:RegisterEvent('MERCHANT_SHOW')
 frame:RegisterEvent('MERCHANT_CLOSED')
 frame:RegisterEvent('BANKFRAME_OPENED')
 frame:RegisterEvent('BANKFRAME_CLOSED')
-frame:RegisterEvent('AUCTION_HOUSE_CLOSED')
 frame:RegisterEvent('MAIL_SHOW')
 frame:RegisterEvent('MAIL_CLOSED')
 frame:RegisterEvent('MAIL_SEND_SUCCESS')
@@ -537,8 +525,6 @@ frame:SetScript('OnEvent', function(_, event, name)
 			SnardgeUtilsMailMarks = SnardgeUtilsMailMarks or {}
 		end
 	elseif event == 'BAG_UPDATE_DELAYED' then
-		-- Verdicts stay cached here: Bagnon redraws every slot on each loot, and asking
-		-- ItemTree about a full bag each time stutters
 		if atMerchant then
 			ClearFinishedMarks()
 		end
@@ -548,7 +534,6 @@ frame:SetScript('OnEvent', function(_, event, name)
 	elseif event == 'MERCHANT_SHOW' then
 		atMerchant = true
 		ClearFinishedMarks()
-		Refresh()
 		C_Timer.After(MERCHANT_SETTLE_SECONDS, SellNext)
 	elseif event == 'MERCHANT_CLOSED' then
 		atMerchant = false
@@ -559,8 +544,6 @@ frame:SetScript('OnEvent', function(_, event, name)
 		C_Timer.After(BANK_SETTLE_SECONDS, DepositNext)
 	elseif event == 'BANKFRAME_CLOSED' then
 		atBank = false
-	elseif event == 'AUCTION_HOUSE_CLOSED' then
-		Refresh()
 	elseif event == 'MAIL_SHOW' then
 		atMailbox = true
 		wipe(attachTried)

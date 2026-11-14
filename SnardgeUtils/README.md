@@ -4,17 +4,16 @@ A collection of small quality of life tools for **WoW Forever**. Every feature c
 
 | Optional addon | Used for |
 |---|---|
-| Bagnon | Bag marks, mailing, bank bag icons |
-| ItemTree | Greying out items only worth their vendor price |
+| Bagnon | Bag marks work in Bagnon as well as in the default bags; fixes its bank bag icons |
 | Questie | Quest mobs for the target macro, quest XP fallback |
 | Leatrix Plus | Settings appear as a page in its panel |
 | Mastercraft | Instant fishing recast |
 
 ## Features
 
-### Bag marks (Bagnon)
+### Bag marks
 
-Mark items in your bags with a modified left click, and SnardgeUtils handles them the next time you visit the right NPC:
+Mark items in your bags with a modified left click, in the default bags or in Bagnon, and SnardgeUtils handles them the next time you visit the right NPC:
 
 | Click | Action |
 |---|---|
@@ -25,10 +24,10 @@ Mark items in your bags with a modified left click, and SnardgeUtils handles the
 
 - The same click again removes the mark. All four clicks can be changed, or turned off, with the cog next to **Bag marks** in the settings.
 - Marked items get a small icon in the top-left corner and a colored border: red for sell, blue for bank, gold for mail.
-- With ItemTree installed, items only worth their vendor price are greyed out too.
-- Bank bags show their own icons instead of question marks.
+- Items marked to sell are greyed out.
+- With Bagnon, its bank bags show their own icons instead of question marks.
 
-### Mailing (Bagnon)
+### Mailing
 
 Set a recipient in the cog window next to **Bag marks**. When you open a mailbox on any other character, every item marked for mail is attached and sent, twelve stacks per mail, and chat lists what went out:
 

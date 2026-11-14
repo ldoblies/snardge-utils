@@ -136,10 +136,10 @@ local function MakeSlider(parent, x, y, label, low, high, step, format, tooltip,
 	return slider
 end
 
--- Mailing belongs to Bag marks, so it greys out while that is off or Bagnon is missing
+-- Mailing belongs to Bag marks, so it greys out while that is off
 local function BuildMailOptions(parent, x, y)
 	local function active()
-		return ns.IsEnabled('bagMarks') and C_AddOns.IsAddOnLoaded('Bagnon')
+		return ns.IsEnabled('bagMarks')
 	end
 
 	local heading = parent:CreateFontString(nil, 'ARTWORK', 'GameFontNormal')
@@ -197,7 +197,7 @@ local function BuildClickPanel(parent, x, y)
 	hint:SetPoint('TOPLEFT', 8, -28)
 	hint:SetPoint('RIGHT', -8, 0)
 	hint:SetJustifyH('LEFT')
-	hint:SetText('Left clicks on Bagnon items. Picking a click another action uses swaps the two.')
+	hint:SetText('Left clicks on items in your bags. Picking a click another action uses swaps the two.')
 
 	local dropdowns = {}
 	for i, action in ipairs(ns.clickActions) do
