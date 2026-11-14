@@ -13,11 +13,13 @@ local DEFAULTS = {
 	enabled = true,
 	radius = 200,
 	farm = true,
+	announce = true,
 }
 
 local kills = {}
 local lootedGUIDs = {}
 local targets = {}
+local announcedNames = {}
 local listeners = {}
 local ready = false
 
@@ -148,6 +150,26 @@ local function Notify()
 	end
 end
 
+-- Like RestedXP, each mob is announced once per session, so walking in and out of range of
+-- the same mobs stays quiet
+local function Announce(names)
+	if not Settings().announce then
+		return
+	end
+	local fresh = {}
+	for _, name in ipairs(names) do
+		if not announcedNames[name] then
+			announcedNames[name] = true
+			fresh[#fresh + 1] = name
+		end
+	end
+	if #fresh > 0 then
+		local color = ChatTypeInfo and ChatTypeInfo.SYSTEM
+		DEFAULT_CHAT_FRAME:AddMessage(MACRO_NAME .. ' macro updated with: ' .. table.concat(fresh, ', '),
+			color and color.r, color and color.g, color and color.b)
+	end
+end
+
 local function Update()
 	if not ready or not Settings().enabled or InCombatLockdown() then
 		return
@@ -155,6 +177,7 @@ local function Update()
 
 	local body, kept = BuildBody(CollectTargets())
 	targets = kept
+	Announce(kept)
 
 	if not GetMacroInfo(MACRO_NAME) then
 		if GetNumMacros() >= (MAX_ACCOUNT_MACROS or 120) then

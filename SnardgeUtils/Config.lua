@@ -304,7 +304,7 @@ local function BuildTargetMacroOptions(parent, x, y)
 	local settings = macro.Settings
 
 	MakeHeading(parent, x, y, 'Target macro')
-	local farm, range
+	local farm, announce, range
 	local box = MakeCheckbox(parent, x, y - ROW, 'Update ' .. macro.name .. ' macro',
 		'Fills the ' .. macro.name .. ' macro with the nearest mobs your quests need, using Questie spawn data. Drag it from /macro onto an action bar once.',
 		function() return settings().enabled end,
@@ -312,13 +312,18 @@ local function BuildTargetMacroOptions(parent, x, y)
 			settings().enabled = checked
 			macro.Update()
 			SetActive(farm, checked)
+			SetActive(announce, checked)
 			SetActive(range, checked)
 		end)
 	farm = MakeCheckbox(parent, x, y - ROW * 2, 'Include farmed mobs',
 		'Also targets mobs you looted at least twice in the last 30 minutes near where you are.',
 		function() return settings().farm end,
 		function(checked) settings().farm = checked; macro.Update() end)
-	range = MakeSlider(parent, x + 20, y - ROW * 3 - 4, 'Range', 50, 500, 25, '%d yd',
+	announce = MakeCheckbox(parent, x, y - ROW * 3, 'Announce changes',
+		'Lists newly added mobs in chat, like RestedXP does. Each mob is announced once per session.',
+		function() return settings().announce end,
+		function(checked) settings().announce = checked end)
+	range = MakeSlider(parent, x + 20, y - ROW * 4 - 4, 'Range', 50, 500, 25, '%d yd',
 		'Mobs whose nearest spawn or kill spot is further away are left out.',
 		function() return settings().radius end,
 		function(value)
@@ -329,11 +334,12 @@ local function BuildTargetMacroOptions(parent, x, y)
 		end)
 	box:HookScript('OnShow', function()
 		SetActive(farm, settings().enabled)
+		SetActive(announce, settings().enabled)
 		SetActive(range, settings().enabled)
 	end)
 
 	local now = parent:CreateFontString(nil, 'ARTWORK', 'GameFontHighlightSmall')
-	now:SetPoint('TOPLEFT', x, y - ROW * 5 + 4)
+	now:SetPoint('TOPLEFT', x, y - ROW * 6 + 4)
 	now:SetWidth(COLUMN_WIDTH)
 	now:SetJustifyH('LEFT')
 
