@@ -1,0 +1,24 @@
+## Interface: 16001
+## Title: SnardgeUtils
+## Notes: Small quality of life tools for WoW Forever. Mark Bagnon items to sell, bank or mail, show xp/hr and pending quest XP on the experience bar, a self-updating target macro for nearby quest mobs, a low health warning sound, LFG filters and more. /su opens the settings.
+## Author: Snardge
+## Category: Quality of Life
+## Version: 1.0.0
+## X-License: MIT
+## OptionalDeps: Bagnon, ItemTree, Questie, Leatrix_Plus, Mastercraft
+## SavedVariablesPerCharacter: SnardgeUtilsSellMarks, SnardgeUtilsBankMarks, SnardgeUtilsBankAlwaysMarks, SnardgeUtilsMailMarks, SnardgeUtilsLfgFilter
+## SavedVariables: SnardgeUtilsSettings
+## LoadSavedVariablesFirst: 1
+
+Settings.lua
+BagMarks.lua
+MapPins.lua
+XpRate.lua
+QuestXp.lua
+BankBagIcons.lua
+LfgFilter.lua
+ManaRegen.lua
+LowHealth.lua
+TargetMacro.lua
+FishRecast.lua
+Config.lua
