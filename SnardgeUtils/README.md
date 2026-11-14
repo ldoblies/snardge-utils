@@ -9,7 +9,7 @@ A collection of small quality of life tools for **WoW Forever**. Every feature c
 - **Ctrl+click** an item to sell it at the next merchant.
 - **Alt+click** to deposit it at the next bank, **Shift+Alt+click** to always bank it.
 - **Ctrl+Shift+click** to always mail it to a character of your choice. Mailing runs by itself when you open a mailbox on any other character, and chat lists what went out. By default only full stacks are sent and part stacks stay in your bags until they fill up.
-- The clicks can be changed with the cog next to **Bag marks** in the settings.
+- The cog next to **Bag marks** in the settings sets the mail recipient and changes the clicks.
 - Marked items get a small icon in the top-left corner and a colored border (red sell, blue bank, gold mail).
 - With ItemTree installed, items only worth their vendor price are greyed out.
 - Bank bags show their own icons instead of question marks.
@@ -53,7 +53,7 @@ WoW Forever does not let addons read your health, so this runs on Blizzard's own
 
 1. Copy the `SnardgeUtils` folder to `World of Warcraft/_forever_/Interface/AddOns/`.
 2. Start WoW or run `/reload`.
-3. Open the settings with `/su`. To use mailing, type the recipient under **Mail to**.
+3. Open the settings with `/su`. To use mailing, click the cog next to **Bag marks** and type the recipient under **Mail to**.
 
 ## License
 

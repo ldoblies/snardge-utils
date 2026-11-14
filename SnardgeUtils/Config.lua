@@ -136,6 +136,50 @@ local function MakeSlider(parent, x, y, label, low, high, step, format, tooltip,
 	return slider
 end
 
+-- Mailing belongs to Bag marks, so it greys out while that is off or Bagnon is missing
+local function BuildMailOptions(parent, x, y)
+	local function active()
+		return ns.IsEnabled('bagMarks') and C_AddOns.IsAddOnLoaded('Bagnon')
+	end
+
+	local heading = parent:CreateFontString(nil, 'ARTWORK', 'GameFontNormal')
+	heading:SetPoint('TOPLEFT', x, y)
+	heading:SetText('Mail to')
+
+	local recipient = CreateFrame('EditBox', nil, parent, 'InputBoxTemplate')
+	recipient:SetSize(110, 20)
+	recipient:SetPoint('LEFT', heading, 'RIGHT', 12, 0)
+	recipient:SetAutoFocus(false)
+	recipient:SetMaxLetters(40)
+	recipient.tooltip = 'Character that gets items marked with Ctrl+Shift+click, as first name and surname. Mailing runs on its own when you open a mailbox on any other character.'
+	recipient:SetScript('OnEnter', ShowTooltip)
+	recipient:SetScript('OnLeave', GameTooltip_Hide)
+	local function Save(self)
+		SnardgeUtilsSettings.mailRecipient = strtrim(self:GetText())
+		self:SetText(SnardgeUtilsSettings.mailRecipient)
+	end
+	recipient:SetScript('OnEnterPressed', function(self) self:ClearFocus() end)
+	recipient:SetScript('OnEditFocusLost', Save)
+	recipient:SetScript('OnEscapePressed', function(self)
+		self:SetText(SnardgeUtilsSettings.mailRecipient)
+		self:ClearFocus()
+	end)
+
+	local fullStacks = MakeCheckbox(parent, x, y - ROW + 2, 'Full stacks only',
+		'Part stacks of items marked for mail stay in your bags until they fill up.',
+		function() return SnardgeUtilsSettings.mailFullStacksOnly end,
+		function(checked) SnardgeUtilsSettings.mailFullStacksOnly = checked end)
+
+	recipient:SetScript('OnShow', function(self)
+		self:SetText(SnardgeUtilsSettings.mailRecipient)
+		local on = active()
+		self:SetEnabled(on)
+		self:SetTextColor(on and 1 or 0.5, on and 1 or 0.5, on and 1 or 0.5)
+		heading:SetFontObject(on and 'GameFontNormal' or 'GameFontDisable')
+		SetActive(fullStacks, on)
+	end)
+end
+
 -- Opens over the page like Leatrix Plus' configuration panels, with its own Done button
 local function BuildClickPanel(parent, x, y)
 	local panel = CreateFrame('Frame', nil, parent)
@@ -158,7 +202,7 @@ local function BuildClickPanel(parent, x, y)
 	local dropdowns = {}
 	for i, action in ipairs(ns.clickActions) do
 		local label = panel:CreateFontString(nil, 'ARTWORK', 'GameFontHighlight')
-		label:SetPoint('TOPLEFT', 8, -36 - 30 * i)
+		label:SetPoint('TOPLEFT', 8, -36 - 28 * i)
 		label:SetText(action.label)
 
 		local dropdown = CreateFrame('DropdownButton', nil, panel, 'WowStyle1DropdownTemplate')
@@ -178,6 +222,8 @@ local function BuildClickPanel(parent, x, y)
 		end)
 		dropdowns[#dropdowns + 1] = dropdown
 	end
+
+	BuildMailOptions(panel, 8, -36 - 28 * (#ns.clickActions + 1) - 4)
 
 	local done = CreateFrame('Button', nil, panel, 'UIPanelButtonTemplate')
 	done:SetSize(80, 22)
@@ -226,54 +272,9 @@ local function BuildFeatureOptions(parent, x, y)
 			box.f:SetText(module.label .. ' (needs ' .. module.requires .. ')')
 			box:HookScript('OnShow', function() SetActive(box, false) end)
 		elseif module.key == 'bagMarks' then
-			MakeCogButton(box, 'Choose the clicks that mark items.', function() clickPanel:Show() end)
+			MakeCogButton(box, 'Choose the clicks that mark items, and who gets the mail.', function() clickPanel:Show() end)
 		end
 	end
-end
-
--- Mailing belongs to Bag marks, so it greys out while that is off or Bagnon is missing.
--- The recipient sits on the heading row to keep the section clear of Leatrix's footer.
-local function BuildMailOptions(parent, x, y)
-	local function active()
-		return ns.IsEnabled('bagMarks') and C_AddOns.IsAddOnLoaded('Bagnon')
-	end
-
-	local heading = parent:CreateFontString(nil, 'ARTWORK', 'GameFontNormal')
-	heading:SetPoint('TOPLEFT', x, y)
-	heading:SetText('Mail to')
-
-	local recipient = CreateFrame('EditBox', nil, parent, 'InputBoxTemplate')
-	recipient:SetSize(110, 20)
-	recipient:SetPoint('LEFT', heading, 'RIGHT', 12, 0)
-	recipient:SetAutoFocus(false)
-	recipient:SetMaxLetters(40)
-	recipient.tooltip = 'Character that gets items marked with Ctrl+Shift+click, as first name and surname. Mailing runs on its own when you open a mailbox on any other character.'
-	recipient:SetScript('OnEnter', ShowTooltip)
-	recipient:SetScript('OnLeave', GameTooltip_Hide)
-	local function Save(self)
-		SnardgeUtilsSettings.mailRecipient = strtrim(self:GetText())
-		self:SetText(SnardgeUtilsSettings.mailRecipient)
-	end
-	recipient:SetScript('OnEnterPressed', function(self) self:ClearFocus() end)
-	recipient:SetScript('OnEditFocusLost', Save)
-	recipient:SetScript('OnEscapePressed', function(self)
-		self:SetText(SnardgeUtilsSettings.mailRecipient)
-		self:ClearFocus()
-	end)
-
-	local fullStacks = MakeCheckbox(parent, x, y - ROW + 2, 'Full stacks only',
-		'Part stacks of items marked for mail stay in your bags until they fill up.',
-		function() return SnardgeUtilsSettings.mailFullStacksOnly end,
-		function(checked) SnardgeUtilsSettings.mailFullStacksOnly = checked end)
-
-	recipient:SetScript('OnShow', function(self)
-		self:SetText(SnardgeUtilsSettings.mailRecipient)
-		local on = active()
-		self:SetEnabled(on)
-		self:SetTextColor(on and 1 or 0.5, on and 1 or 0.5, on and 1 or 0.5)
-		heading:SetFontObject(on and 'GameFontNormal' or 'GameFontDisable')
-		SetActive(fullStacks, on)
-	end)
 end
 
 local function BuildLowHealthOptions(parent, x, y)
@@ -346,7 +347,6 @@ end
 -- Two columns, at the spacing Leatrix Plus uses for its own pages
 local function BuildOptions(parent, x, y)
 	BuildFeatureOptions(parent, x, y)
-	BuildMailOptions(parent, x, y - ROW * (#ns.modules + 1) - 8)
 	BuildLowHealthOptions(parent, x + COLUMN_GAP, y)
 	BuildTargetMacroOptions(parent, x + COLUMN_GAP, y - ROW * 4)
 	parent:HookScript('OnShow', RefreshReloadNotice)

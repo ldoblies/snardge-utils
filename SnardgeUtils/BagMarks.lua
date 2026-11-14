@@ -283,7 +283,7 @@ local function StartMailing()
 	end
 	if not recipient then
 		if next(SnardgeUtilsMailMarks) then
-			print(PREFIX .. 'items are marked for mail, but no recipient is set: type one under Mail in /su')
+			print(PREFIX .. 'items are marked for mail, but no recipient is set: click the cog next to Bag marks in /su')
 		end
 		return
 	end
@@ -488,7 +488,7 @@ hooksecurefunc(Bagnon.Item, 'PostClick', function(button, mouseButton)
 		SnardgeUtilsSellMarks[info.itemID] = nil
 		SnardgeUtilsBankMarks[info.itemID] = nil
 		SnardgeUtilsBankAlwaysMarks[info.itemID] = nil
-		print(PREFIX .. 'will always mail ' .. info.hyperlink .. ' to ' .. (MailRecipient() or 'your recipient, once you set one under Mail in /su'))
+		print(PREFIX .. 'will always mail ' .. info.hyperlink .. ' to ' .. (MailRecipient() or 'your recipient, once you set one with the cog next to Bag marks in /su'))
 	end
 
 	Refresh()
