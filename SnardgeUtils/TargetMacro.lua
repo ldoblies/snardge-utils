@@ -3,8 +3,11 @@ local ADDON_NAME, ns = ...
 local MACRO_NAME = 'SUTarget'
 local MACRO_ICON = 'Ability_Hunter_SniperShot'
 local MACRO_LIMIT = 255
--- /targetexact also picks corpses, so step back to the previous target if the last match is dead
-local DEAD_FALLBACK = '\n/targetlasttarget [dead]'
+-- /targetexact also picks corpses: each later line only fires while there is no target or a dead
+-- one, the dead leftover is cleared at the end, and the skull goes on a living enemy only
+local FIRST_LINE = '/cleartarget\n/targetexact '
+local NEXT_LINE = '\n/targetexact [noexists][dead] '
+local LAST_LINES = '\n/cleartarget [dead]\n/tm [harm,nodead] !8'
 local REFRESH = 5
 local KILL_WINDOW = 1800
 local MIN_KILLS = 2
@@ -48,7 +51,9 @@ end
 -- Questie keeps each logged quest's objectives with the spawns of every mob that counts
 -- for them, including the mobs that drop a needed item (marked Hostile, unlike objects
 -- and vendors). Distances come from Questie's own helper, in world yards.
-local function AddQuestTargets(distanceByName, radius)
+-- Mobs only finished objectives ask for go into doneNames, so the farming list leaves them out
+-- once the quest no longer needs them
+local function AddQuestTargets(distanceByName, radius, doneNames)
 	if not (QuestieLoader and Questie and Questie.started) then
 		return
 	end
@@ -58,13 +63,19 @@ local function AddQuestTargets(distanceByName, radius)
 		return
 	end
 
+	local neededNames = {}
 	for _, acceptance in pairs(ActiveQuests.GetAll()) do
 		local quest = acceptance.quest
-		if quest and quest.Objectives and quest:IsComplete() ~= 1 then
+		if quest and quest.Objectives then
+			local questDone = quest:IsComplete() == 1
 			for _, objective in pairs(quest.Objectives) do
-				if not objective.Completed and objective.spawnList then
-					for _, spawn in pairs(objective.spawnList) do
-						if spawn.Hostile and spawn.Name and spawn.Spawns then
+				local done = questDone or objective.Completed
+				for _, spawn in pairs(objective.spawnList or {}) do
+					if spawn.Hostile and spawn.Name then
+						if done then
+							doneNames[spawn.Name] = true
+						elseif spawn.Spawns then
+							neededNames[spawn.Name] = true
 							local _, _, distance = DistanceUtils.GetNearestSpawn(spawn.Spawns)
 							Consider(distanceByName, spawn.Name, distance, radius)
 						end
@@ -72,6 +83,9 @@ local function AddQuestTargets(distanceByName, radius)
 				end
 			end
 		end
+	end
+	for name in pairs(neededNames) do
+		doneNames[name] = nil
 	end
 end
 
@@ -82,7 +96,7 @@ local function PlayerPosition()
 	end
 end
 
-local function AddFarmTargets(distanceByName, radius)
+local function AddFarmTargets(distanceByName, radius, doneNames)
 	local x, y, instance = PlayerPosition()
 	if not x then
 		return
@@ -100,7 +114,7 @@ local function AddFarmTargets(distanceByName, radius)
 		end
 	end
 	for name, count in pairs(countByName) do
-		if count >= MIN_KILLS then
+		if count >= MIN_KILLS and not doneNames[name] then
 			Consider(distanceByName, name, distanceByKillName[name], radius)
 		end
 	end
@@ -108,10 +122,10 @@ end
 
 local function CollectTargets()
 	local settings = Settings()
-	local distanceByName = {}
-	AddQuestTargets(distanceByName, settings.radius)
+	local distanceByName, doneNames = {}, {}
+	AddQuestTargets(distanceByName, settings.radius, doneNames)
 	if settings.farm then
-		AddFarmTargets(distanceByName, settings.radius)
+		AddFarmTargets(distanceByName, settings.radius, doneNames)
 	end
 
 	local names = {}
@@ -122,26 +136,23 @@ local function CollectTargets()
 	return names
 end
 
--- Later /targetexact lines win when they find their mob, so the nearest name goes last.
+-- The nearest name comes first and the rest only fill in for a mob that is missing or dead.
 -- Names that do not fit in the macro are dropped from the far end.
 local function BuildBody(names)
-	local lines = {}
-	local length = #DEAD_FALLBACK
+	local body = ''
 	local kept = {}
 	for _, name in ipairs(names) do
-		local line = '/targetexact ' .. name
-		local added = #line + (#lines > 0 and 1 or 0)
-		if length + added > MACRO_LIMIT then
+		local line = (#kept == 0 and FIRST_LINE or NEXT_LINE) .. name
+		if #body + #line + #LAST_LINES > MACRO_LIMIT then
 			break
 		end
-		tinsert(lines, 1, line)
+		body = body .. line
 		kept[#kept + 1] = name
-		length = length + added
 	end
-	if #lines == 0 then
+	if #kept == 0 then
 		return '', kept
 	end
-	return table.concat(lines, '\n') .. DEAD_FALLBACK, kept
+	return body .. LAST_LINES, kept
 end
 
 local function Notify()

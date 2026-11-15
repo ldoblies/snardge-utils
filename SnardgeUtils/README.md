@@ -46,7 +46,7 @@ SnardgeUtils: keeping part stacks: [Copper Ore] x7
 
 ### Target macro
 
-The `SUTarget` macro is rewritten out of combat with `/targetexact` lines for the nearest mobs your quests still need, using Questie's spawn data, within a range you choose (50 to 500 yards). Mobs you have looted at least twice in the last 30 minutes nearby are added too, so it also follows what you are farming. The nearest mob always wins. Newly added mobs are announced in chat, like RestedXP does (`SUTarget macro updated with: Kobold Vermin`), once per mob each session; this can be switched off. Drag it from `/macro` onto an action bar once; the settings show what it currently targets.
+The `SUTarget` macro is rewritten out of combat with `/targetexact` lines for the nearest mobs your quests still need, using Questie's spawn data, within a range you choose (50 to 500 yards). Mobs you have looted at least twice in the last 30 minutes nearby are added too, so it also follows what you are farming, until a quest objective that asked for them is done. The nearest mob wins, corpses are skipped in favour of the next mob, and the target gets a skull. Newly added mobs are announced in chat, like RestedXP does (`SUTarget macro updated with: Kobold Vermin`), once per mob each session; this can be switched off. Drag it from `/macro` onto an action bar once; the settings show what it currently targets.
 
 ### Low health warning
 
