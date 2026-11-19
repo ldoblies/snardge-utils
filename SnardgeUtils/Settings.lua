@@ -13,7 +13,7 @@ SnardgeUtilsSettings.profitPriceSource = SnardgeUtilsSettings.profitPriceSource 
 SnardgeUtilsSettings.summonMessage = SnardgeUtilsSettings.summonMessage or 'Got the summon, on a loading screen now'
 -- GROUP for party or raid chat, WHISPER for the summoner
 SnardgeUtilsSettings.summonChannel = SnardgeUtilsSettings.summonChannel or 'GROUP'
--- totPowerColors[powerToken] = { r = r, g = g, b = b }; a missing token keeps Blizzard's own bar
+-- totPowerColors[powerToken] = { r = r, g = g, b = b }; a missing token uses PowerBarColor's standard color
 SnardgeUtilsSettings.totPowerColors = SnardgeUtilsSettings.totPowerColors or {}
 
 ns.modules = {
@@ -28,7 +28,7 @@ ns.modules = {
 	{ key = 'vendorProfit', label = 'Vendor profit', requires = 'TradeSkillMaster', tooltip = "/suprofit lists the recipes your characters know by what a craft brings at a vendor, with materials at TSM prices or what vendors charged you. Shares recipes with your other license's characters while both are online." },
 	{ key = 'priceAlert', label = 'High prices at login', requires = 'TradeSkillMaster', tooltip = 'After logging in, a popup lists items you own that sell for at least 120% of their usual TSM price. /suprices shows it any time.' },
 	{ key = 'summonAnnounce', label = 'Summon announce', defaultOff = true, tooltip = 'When you accept a summon to another continent, a chat message tells the group you got it and are on a loading screen.' },
-	{ key = 'totPowerColors', label = 'ToT power colors', tooltip = 'The target of target power bar uses your own color for each power type. Pick them with the cog.' },
+	{ key = 'totPowerColors', label = 'ToT power colors', tooltip = "The target of target power bar shows the standard color for each power type, instead of Forever's grey mana and blue rage. The cog sets your own colors." },
 }
 
 for _, module in ipairs(ns.modules) do

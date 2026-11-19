@@ -308,7 +308,7 @@ end
 
 local function BuildTotColorPanel(parent, x, y)
 	local panel = MakeOverlayPanel(parent, x, y, 'Target of target power colors',
-		"Click a color to change it. Default brings back Blizzard's own bar.")
+		'Click a color to change it. Default brings back the standard color.')
 
 	local swatches = {}
 	local function Refresh()
@@ -333,21 +333,18 @@ local function BuildTotColorPanel(parent, x, y)
 		swatch.color:SetPoint('TOPLEFT', 1, -1)
 		swatch.color:SetPoint('BOTTOMRIGHT', -1, 1)
 		swatch:SetScript('OnClick', function()
-			local saved = SnardgeUtilsSettings.totPowerColors[token]
 			local r, g, b = TotColor(token)
 			-- Leatrix Plus' panel is FULLSCREEN_DIALOG and would cover the picker
 			ColorPickerFrame:Hide()
 			ColorPickerFrame:SetFrameStrata('FULLSCREEN_DIALOG')
 			ColorPickerFrame:SetFrameLevel(panel:GetFrameLevel() + 10)
+			-- No cancelFunc: the picker also cancels on a click outside it or Escape, which would
+			-- undo a color the bar already shows. Default undoes a pick instead.
 			ColorPickerFrame:SetupColorPickerAndShow({
 				r = r, g = g, b = b,
 				swatchFunc = function()
 					local newR, newG, newB = ColorPickerFrame:GetColorRGB()
 					SnardgeUtilsSettings.totPowerColors[token] = { r = newR, g = newG, b = newB }
-					Refresh()
-				end,
-				cancelFunc = function()
-					SnardgeUtilsSettings.totPowerColors[token] = saved
 					Refresh()
 				end,
 			})
