@@ -2,6 +2,8 @@ local _, ns = ...
 
 local TITLE = 'SnardgeUtils'
 local ROW = 20
+-- Tighter than ROW so every feature fits above the footer of Leatrix Plus' panel
+local FEATURE_ROW = 18
 local COLUMN_GAP = 194
 local COLUMN_WIDTH = 200
 -- Leatrix Plus labels its own reload button with this
@@ -181,7 +183,7 @@ local function BuildMailOptions(parent, x, y)
 end
 
 -- Opens over the page like Leatrix Plus' configuration panels, with its own Done button
-local function BuildClickPanel(parent, x, y)
+local function MakeOverlayPanel(parent, x, y, title, hintText)
 	local panel = CreateFrame('Frame', nil, parent)
 	panel:SetPoint('TOPLEFT', x - 8, y + 8)
 	panel:SetPoint('BOTTOMRIGHT', -8, 48)
@@ -192,12 +194,26 @@ local function BuildClickPanel(parent, x, y)
 	background:SetAllPoints()
 	background:SetColorTexture(0.05, 0.05, 0.05, 0.97)
 
-	MakeHeading(panel, 8, -8, 'Bag mark clicks')
+	MakeHeading(panel, 8, -8, title)
 	local hint = panel:CreateFontString(nil, 'ARTWORK', 'GameFontHighlightSmall')
 	hint:SetPoint('TOPLEFT', 8, -28)
 	hint:SetPoint('RIGHT', -8, 0)
 	hint:SetJustifyH('LEFT')
-	hint:SetText('Left clicks on items in your bags. Picking a click another action uses swaps the two.')
+	hint:SetText(hintText)
+
+	local done = CreateFrame('Button', nil, panel, 'UIPanelButtonTemplate')
+	done:SetSize(80, 22)
+	done:SetPoint('BOTTOMRIGHT', -8, 8)
+	done:SetText(DONE)
+	done:SetScript('OnClick', function() panel:Hide() end)
+
+	parent:HookScript('OnHide', function() panel:Hide() end)
+	return panel
+end
+
+local function BuildClickPanel(parent, x, y)
+	local panel = MakeOverlayPanel(parent, x, y, 'Bag mark clicks',
+		'Left clicks on items in your bags. Picking a click another action uses swaps the two.')
 
 	local dropdowns = {}
 	for i, action in ipairs(ns.clickActions) do
@@ -225,18 +241,131 @@ local function BuildClickPanel(parent, x, y)
 
 	BuildMailOptions(panel, 8, -36 - 28 * (#ns.clickActions + 1) - 4)
 
-	local done = CreateFrame('Button', nil, panel, 'UIPanelButtonTemplate')
-	done:SetSize(80, 22)
-	done:SetPoint('BOTTOMRIGHT', -8, 8)
-	done:SetText(DONE)
-	done:SetScript('OnClick', function() panel:Hide() end)
-
 	panel:SetScript('OnShow', function()
 		for _, dropdown in ipairs(dropdowns) do
 			dropdown:GenerateMenu()
 		end
 	end)
-	parent:HookScript('OnHide', function() panel:Hide() end)
+	return panel
+end
+
+local SUMMON_CHANNELS = {
+	{ key = 'GROUP', label = 'Party or raid chat' },
+	{ key = 'WHISPER', label = 'Whisper the summoner' },
+}
+
+local function BuildSummonPanel(parent, x, y)
+	local panel = MakeOverlayPanel(parent, x, y, 'Summon announce',
+		'Sent when you accept a summon to another continent, or anywhere else with a loading screen. Leave the message empty to send nothing.')
+
+	local label = panel:CreateFontString(nil, 'ARTWORK', 'GameFontHighlight')
+	label:SetPoint('TOPLEFT', 8, -64)
+	label:SetText('Message')
+
+	local message = CreateFrame('EditBox', nil, panel, 'InputBoxTemplate')
+	message:SetSize(250, 20)
+	message:SetPoint('LEFT', label, 'LEFT', 86, 0)
+	message:SetAutoFocus(false)
+	message:SetMaxLetters(255)
+	message:SetScript('OnEnterPressed', function(self) self:ClearFocus() end)
+	message:SetScript('OnEditFocusLost', function(self)
+		SnardgeUtilsSettings.summonMessage = strtrim(self:GetText())
+		self:SetText(SnardgeUtilsSettings.summonMessage)
+	end)
+	message:SetScript('OnEscapePressed', function(self)
+		self:SetText(SnardgeUtilsSettings.summonMessage)
+		self:ClearFocus()
+	end)
+
+	local sendTo = panel:CreateFontString(nil, 'ARTWORK', 'GameFontHighlight')
+	sendTo:SetPoint('TOPLEFT', 8, -92)
+	sendTo:SetText('Send to')
+
+	local channel = CreateFrame('DropdownButton', nil, panel, 'WowStyle1DropdownTemplate')
+	channel:SetWidth(180)
+	channel:SetPoint('LEFT', sendTo, 'LEFT', 86, 0)
+	channel:SetupMenu(function(_, root)
+		for _, option in ipairs(SUMMON_CHANNELS) do
+			root:CreateRadio(option.label,
+				function() return SnardgeUtilsSettings.summonChannel == option.key end,
+				function() SnardgeUtilsSettings.summonChannel = option.key end)
+		end
+	end)
+
+	panel:SetScript('OnShow', function()
+		message:SetText(SnardgeUtilsSettings.summonMessage)
+		channel:GenerateMenu()
+	end)
+	return panel
+end
+
+local TOT_POWERS = { 'MANA', 'RAGE', 'ENERGY', 'FOCUS' }
+
+local function TotColor(token)
+	local color = SnardgeUtilsSettings.totPowerColors[token] or PowerBarColor[token]
+	return color.r, color.g, color.b
+end
+
+local function BuildTotColorPanel(parent, x, y)
+	local panel = MakeOverlayPanel(parent, x, y, 'Target of target power colors',
+		"Click a color to change it. Default brings back Blizzard's own bar.")
+
+	local swatches = {}
+	local function Refresh()
+		for token, swatch in pairs(swatches) do
+			swatch.color:SetColorTexture(TotColor(token))
+			swatch.default:SetEnabled(SnardgeUtilsSettings.totPowerColors[token] ~= nil)
+		end
+	end
+
+	for i, token in ipairs(TOT_POWERS) do
+		local label = panel:CreateFontString(nil, 'ARTWORK', 'GameFontHighlight')
+		label:SetPoint('TOPLEFT', 8, -36 - 28 * i)
+		label:SetText(_G[token] or token)
+
+		local swatch = CreateFrame('Button', nil, panel)
+		swatch:SetSize(40, 18)
+		swatch:SetPoint('LEFT', label, 'LEFT', 86, 0)
+		local border = swatch:CreateTexture(nil, 'BACKGROUND')
+		border:SetAllPoints()
+		border:SetColorTexture(0.6, 0.6, 0.6)
+		swatch.color = swatch:CreateTexture(nil, 'ARTWORK')
+		swatch.color:SetPoint('TOPLEFT', 1, -1)
+		swatch.color:SetPoint('BOTTOMRIGHT', -1, 1)
+		swatch:SetScript('OnClick', function()
+			local saved = SnardgeUtilsSettings.totPowerColors[token]
+			local r, g, b = TotColor(token)
+			-- Leatrix Plus' panel is FULLSCREEN_DIALOG and would cover the picker
+			ColorPickerFrame:Hide()
+			ColorPickerFrame:SetFrameStrata('FULLSCREEN_DIALOG')
+			ColorPickerFrame:SetFrameLevel(panel:GetFrameLevel() + 10)
+			ColorPickerFrame:SetupColorPickerAndShow({
+				r = r, g = g, b = b,
+				swatchFunc = function()
+					local newR, newG, newB = ColorPickerFrame:GetColorRGB()
+					SnardgeUtilsSettings.totPowerColors[token] = { r = newR, g = newG, b = newB }
+					Refresh()
+				end,
+				cancelFunc = function()
+					SnardgeUtilsSettings.totPowerColors[token] = saved
+					Refresh()
+				end,
+			})
+		end)
+
+		swatch.default = CreateFrame('Button', nil, panel, 'UIPanelButtonTemplate')
+		swatch.default:SetSize(70, 22)
+		swatch.default:SetPoint('LEFT', swatch, 'RIGHT', 12, 0)
+		swatch.default:SetText(DEFAULT)
+		swatch.default:SetScript('OnClick', function()
+			SnardgeUtilsSettings.totPowerColors[token] = nil
+			Refresh()
+		end)
+
+		swatches[token] = swatch
+	end
+
+	panel:SetScript('OnShow', Refresh)
 	return panel
 end
 
@@ -261,18 +390,23 @@ end
 
 local function BuildFeatureOptions(parent, x, y)
 	MakeHeading(parent, x, y, 'Features')
-	local clickPanel = BuildClickPanel(parent, x, y)
+	local cogByKey = {
+		bagMarks = { tooltip = 'Choose the clicks that mark items, and who gets the mail.', panel = BuildClickPanel(parent, x, y) },
+		summonAnnounce = { tooltip = 'Choose the message and where it goes.', panel = BuildSummonPanel(parent, x, y) },
+		totPowerColors = { tooltip = 'Choose a color for each power type.', panel = BuildTotColorPanel(parent, x, y) },
+	}
 	for row, module in ipairs(ns.modules) do
 		local function get() return ns.IsEnabled(module.key) end
 		NeedsReload(module.key, get)
-		local box = MakeCheckbox(parent, x, y - ROW * row, module.label, module.tooltip, get,
+		local box = MakeCheckbox(parent, x, y - FEATURE_ROW * row, module.label, module.tooltip, get,
 			function(checked) ns.SetEnabled(module.key, checked) end)
 		local missing = module.requires and not C_AddOns.IsAddOnLoaded(module.requires)
+		local cog = cogByKey[module.key]
 		if missing then
 			box.f:SetText(module.label .. ' (needs ' .. module.requires .. ')')
 			box:HookScript('OnShow', function() SetActive(box, false) end)
-		elseif module.key == 'bagMarks' then
-			MakeCogButton(box, 'Choose the clicks that mark items, and who gets the mail.', function() clickPanel:Show() end)
+		elseif cog then
+			MakeCogButton(box, cog.tooltip, function() cog.panel:Show() end)
 		end
 	end
 end

@@ -10,6 +10,11 @@ end
 SnardgeUtilsSettings.mailRecipient = SnardgeUtilsSettings.mailRecipient or ''
 -- TSM custom price for materials bought on the auction house
 SnardgeUtilsSettings.profitPriceSource = SnardgeUtilsSettings.profitPriceSource or 'first(dbminbuyout, dbmarket)'
+SnardgeUtilsSettings.summonMessage = SnardgeUtilsSettings.summonMessage or 'Got the summon, on a loading screen now'
+-- GROUP for party or raid chat, WHISPER for the summoner
+SnardgeUtilsSettings.summonChannel = SnardgeUtilsSettings.summonChannel or 'GROUP'
+-- totPowerColors[powerToken] = { r = r, g = g, b = b }; a missing token keeps Blizzard's own bar
+SnardgeUtilsSettings.totPowerColors = SnardgeUtilsSettings.totPowerColors or {}
 
 ns.modules = {
 	{ key = 'bagMarks', label = 'Bag marks', tooltip = 'Ctrl, Alt and Shift clicks on items in your bags mark them to sell, bank or mail. Works with the default bags and with Bagnon.' },
@@ -22,7 +27,15 @@ ns.modules = {
 	{ key = 'fishRecast', label = 'Instant fishing recast', requires = 'Mastercraft', tooltip = "Mastercraft's fishing key casts again as soon as you let go of it after a catch, instead of 0.4 seconds later." },
 	{ key = 'vendorProfit', label = 'Vendor profit', requires = 'TradeSkillMaster', tooltip = "/suprofit lists the recipes your characters know by what a craft brings at a vendor, with materials at TSM prices or what vendors charged you. Shares recipes with your other license's characters while both are online." },
 	{ key = 'priceAlert', label = 'High prices at login', requires = 'TradeSkillMaster', tooltip = 'After logging in, a popup lists items you own that sell for at least 120% of their usual TSM price. /suprices shows it any time.' },
+	{ key = 'summonAnnounce', label = 'Summon announce', defaultOff = true, tooltip = 'When you accept a summon to another continent, a chat message tells the group you got it and are on a loading screen.' },
+	{ key = 'totPowerColors', label = 'ToT power colors', tooltip = 'The target of target power bar uses your own color for each power type. Pick them with the cog.' },
 }
+
+for _, module in ipairs(ns.modules) do
+	if module.defaultOff and SnardgeUtilsSettings.disabled[module.key] == nil then
+		SnardgeUtilsSettings.disabled[module.key] = true
+	end
+end
 
 -- Modifier combos for left clicks on Bagnon items, as CTRL, ALT and SHIFT joined by '-' in
 -- that order, or NONE for off
@@ -77,5 +90,5 @@ function ns.IsEnabled(key)
 end
 
 function ns.SetEnabled(key, enabled)
-	SnardgeUtilsSettings.disabled[key] = not enabled or nil
+	SnardgeUtilsSettings.disabled[key] = not enabled
 end

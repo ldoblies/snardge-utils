@@ -83,6 +83,8 @@ Prices come from TSM: the recent price (3-day, then 14-day market value, then th
 - **Looking For Group:** the browser's gear menu filters listings by class and role, and sorts them by level, highest first.
 - **Mana:** mana per second next to the player frame's mana bar while mana is not full.
 - **Fishing (Mastercraft):** its fishing key casts again as soon as you let go of it after a catch.
+- **Summon announce** (off by default): accepting a summon to another continent, or anywhere else with a loading screen, posts a message in party or raid chat, or whispers the summoner. The message and channel are in the cog next to it.
+- **Target of target power colors:** pick your own color for mana, rage, energy and focus on the target of target power bar with the cog next to it; Default brings back Blizzard's bar.
 
 ## Settings
 
